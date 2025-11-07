@@ -207,8 +207,7 @@ marimo/_lsp/
 __marimo__/
 
 # Data files (too large for GitHub)
+# Игнорируем большие CSV файлы в папке raw
 data/raw/*.csv
 data/raw/*.xlsx
 data/raw/*.xls
-*.csv
-!requirements.txt
