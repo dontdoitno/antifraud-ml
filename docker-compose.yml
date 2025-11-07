@@ -1,0 +1,58 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  # Основное приложение FraudGuard AI
+  fraudguard:
+    build: .
+    container_name: fraudguard_api
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=false
+      - LOG_LEVEL=INFO
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - fraudguard_network
+
+  # Redis для кэширования
+  redis:
+    image: redis:7-alpine
+    container_name: fraudguard_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - fraudguard_network
+
+  # PostgreSQL (опционально, для хранения истории транзакций)
+  postgres:
+    image: postgres:15-alpine
+    container_name: fraudguard_db
+    environment:
+      POSTGRES_USER: fraudguard
+      POSTGRES_PASSWORD: fraudguard_password
+      POSTGRES_DB: fraudguard_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - fraudguard_network
+
+volumes:
+  redis_data:
+  postgres_data:
+
+networks:
+  fraudguard_network:
+    driver: bridge

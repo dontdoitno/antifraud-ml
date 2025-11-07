@@ -1,9 +1,9 @@
 """
 Pydantic модели для валидации данных API
 """
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Optional, List, Dict
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 
@@ -45,9 +45,10 @@ class TransactionRequest(BaseModel):
     device_id: Optional[str] = Field(None, description="ID устройства")
     user_agent: Optional[str] = Field(None, description="User Agent браузера")
     location: Optional[str] = Field(None, description="Геолокация")
-    timestamp: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    timestamp: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-    @validator('amount')
+    @field_validator('amount')
+    @classmethod
     def validate_amount(cls, v):
         if v <= 0:
             raise ValueError('Сумма должна быть положительной')
@@ -55,8 +56,8 @@ class TransactionRequest(BaseModel):
             raise ValueError('Сумма транзакции превышает максимально допустимую')
         return v
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "type": "TRANSFER",
                 "amount": 150000.0,
@@ -70,6 +71,7 @@ class TransactionRequest(BaseModel):
                 "device_id": "device_12345"
             }
         }
+    )
 
 
 class RiskAssessment(BaseModel):
@@ -95,10 +97,10 @@ class TransactionResponse(BaseModel):
     requires_3d_secure: bool = Field(False, description="Требуется ли 3D-Secure")
     should_block: bool = Field(False, description="Следует ли блокировать транзакцию")
 
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "transaction_id": "TXN_1234567890",
                 "is_fraud": True,
@@ -115,6 +117,7 @@ class TransactionResponse(BaseModel):
                 "timestamp": "2025-11-07T14:30:00"
             }
         }
+    )
 
 
 class EvidenceRecord(BaseModel):
@@ -126,12 +129,14 @@ class EvidenceRecord(BaseModel):
     ip_logs: List[str] = []
     device_fingerprint: Optional[str] = None
     screenshots: List[str] = []
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class HealthCheck(BaseModel):
     """Статус здоровья сервиса"""
     status: str
     timestamp: datetime
-    model_loaded: bool
+    is_model_loaded: bool = Field(..., description="Загружена ли ML модель")
     version: str
+
+    model_config = ConfigDict(protected_namespaces=())

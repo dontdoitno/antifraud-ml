@@ -8,7 +8,7 @@ import pandas as pd
 import xgboost as xgb
 from typing import Dict, Optional
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 import joblib
 from pathlib import Path
 
@@ -101,7 +101,7 @@ class FraudDetector:
             self.stats["total_predictions"] += 1
             if prediction > 0.5:
                 self.stats["fraud_detected"] += 1
-            self.stats["last_prediction_time"] = datetime.utcnow().isoformat()
+            self.stats["last_prediction_time"] = datetime.now(timezone.utc).isoformat()
 
             return float(prediction)
 
