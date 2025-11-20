@@ -131,7 +131,7 @@ export default function AnalyticsPage() {
             {/* KPIs */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <StatCard
-                    title="Fraud Attempts"
+                    title="Попытки мошенничества"
                     value={fraudCount}
                     icon={AlertTriangle}
                     description={`${((fraudCount / transactions.length) * 100).toFixed(1)}% от всех транзакций`}
@@ -262,7 +262,7 @@ export default function AnalyticsPage() {
                                         <p className="font-medium">{gateway.name}</p>
                                         <p className="text-xs text-muted-foreground">{gateway.count} транзакций</p>
                                     </div>
-                                    <span className="text-sm font-semibold">{gateway.rate}% fraud rate</span>
+                                    <span className="text-sm font-semibold">{gateway.rate}% количество мошенничества</span>
                                 </div>
                                 <div className="h-2 rounded-full bg-muted overflow-hidden">
                                     <div

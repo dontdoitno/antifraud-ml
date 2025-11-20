@@ -194,7 +194,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
 
             {/* Risk Score Card */}
             <Card className="border-2">
-                <CardContent className="p-6">
+                <CardContent className="p-6 pt-6">
                     <div className="grid md:grid-cols-3 gap-6">
                         {/* Risk Gauge */}
                         <div className="flex flex-col items-center justify-center">
@@ -394,7 +394,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                         </div>
                         {(transaction.vpn || transaction.proxy || transaction.tor) && (
                             <div className="rounded-lg border border-risk-high/20 bg-risk-high/5 p-3">
-                                <p className="text-sm font-semibold text-risk-high mb-1">⚠️ Suspicious Network</p>
+                                <p className="text-sm font-semibold text-risk-high mb-1">⚠️ Подозрительная сеть</p>
                                 <div className="flex gap-2">
                                     {transaction.vpn && <Badge className="bg-risk-high/10 text-risk-high">VPN</Badge>}
                                     {transaction.proxy && <Badge className="bg-risk-high/10 text-risk-high">Proxy</Badge>}

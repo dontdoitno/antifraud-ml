@@ -175,7 +175,7 @@ export default function TransactionsPage() {
             {/* Filters and Search */}
             <Card>
                 <CardContent className="p-4">
-                    <div className="flex flex-col sm:flex-row gap-4 items-center">
+                    <div className="pt-6 flex flex-col sm:flex-row gap-4 items-center">
                         {/* Search */}
                         <div className="flex-1 w-full">
                             <div className="relative">
