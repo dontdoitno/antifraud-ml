@@ -4,7 +4,7 @@ import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from 'react-hot-toast';
 import Link from "next/link";
-import { ArrowLeft, Shield, User, Smartphone, MapPin, Package, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
+import { ArrowLeft, Shield, User, Smartphone, MapPin, Package, AlertTriangle, CheckCircle, XCircle, ClipboardPaste } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -79,7 +79,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
             await new Promise(resolve => setTimeout(resolve, 1000));
             setTransactionStatus('approved');
             toast.success('Транзакция успешно одобрена!', {
-                icon: '✅',
+                icon: <CheckCircle className="h-5 w-5 text-green-500" />,
             });
             setActionLoading(false);
             // Обновляем транзакцию в списке через localStorage или состояние
@@ -100,7 +100,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
             await new Promise(resolve => setTimeout(resolve, 1000));
             setTransactionStatus('blocked');
             toast.success('Транзакция заблокирована', {
-                icon: '🚫',
+                icon: <XCircle className="h-5 w-5 text-red-500" />,
             });
             setActionLoading(false);
             // Обновляем транзакцию в списке через localStorage или состояние
@@ -121,7 +121,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
             await new Promise(resolve => setTimeout(resolve, 1000));
             setTransactionStatus('review');
             toast.success('Запрос на проверку отправлен', {
-                icon: '📋',
+                icon: <ClipboardPaste className="h-5 w-5 color-c4c4c4" />,
             });
             setActionLoading(false);
         } catch (error) {
@@ -158,29 +158,37 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                     <p className="text-muted-foreground">ID: {transaction.transaction_id}</p>
                 </div>
                 <div className="flex gap-2">
-                    <Button
-                        variant="outline"
-                        className="bg-green-500/10 text-green-500 border-green-500/20 hover:bg-green-500/20"
-                        onClick={handleApprove}
-                        disabled={actionLoading}
-                    >
-                        {actionLoading ? 'Обработка...' : 'Одобрить'}
-                    </Button>
-                    <Button
-                        variant="outline"
-                        className="bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20"
-                        onClick={handleBlock}
-                        disabled={actionLoading}
-                    >
-                        {actionLoading ? 'Обработка...' : 'Заблокировать'}
-                    </Button>
-                    <Button
-                        variant="outline"
-                        onClick={handleRequestReview}
-                        disabled={actionLoading}
-                    >
-                        {actionLoading ? 'Обработка...' : 'Запросить проверку'}
-                    </Button>
+                    {/* Показываем кнопки Одобрить/Заблокировать только если статус review или pending */}
+                    {(transactionStatus === 'review' || transactionStatus === 'pending') && (
+                        <>
+                            <Button
+                                variant="outline"
+                                className="bg-green-500/10 text-green-500 border-green-500/20 hover:bg-green-500/20"
+                                onClick={handleApprove}
+                                disabled={actionLoading}
+                            >
+                                {actionLoading ? 'Обработка...' : 'Одобрить'}
+                            </Button>
+                            <Button
+                                variant="outline"
+                                className="bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20"
+                                onClick={handleBlock}
+                                disabled={actionLoading}
+                            >
+                                {actionLoading ? 'Обработка...' : 'Заблокировать'}
+                            </Button>
+                        </>
+                    )}
+                    {/* Показываем кнопку Запросить проверку только если статус approved или blocked */}
+                    {(transactionStatus === 'approved' || transactionStatus === 'blocked') && (
+                        <Button
+                            variant="outline"
+                            onClick={handleRequestReview}
+                            disabled={actionLoading}
+                        >
+                            {actionLoading ? 'Обработка...' : 'Запросить проверку'}
+                        </Button>
+                    )}
                 </div>
             </div>
 

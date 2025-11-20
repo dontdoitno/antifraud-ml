@@ -4,6 +4,7 @@ import "./globals.css";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { ToastProvider } from "@/components/ui/toast-provider";
+import { SidebarProvider } from "@/components/layout/sidebar-context";
 
 const inter = Inter({ subsets: ["latin", "cyrillic"] });
 
@@ -20,16 +21,18 @@ export default function RootLayout({
     return (
         <html lang="ru" className="dark">
             <body className={inter.className}>
-                <ToastProvider />
-                <div className="flex h-screen overflow-hidden bg-background">
-                    <Sidebar />
-                    <div className="flex flex-1 flex-col overflow-hidden">
-                        <Header />
-                        <main className="flex-1 overflow-y-auto p-6">
-                            {children}
-                        </main>
+                <SidebarProvider>
+                    <ToastProvider />
+                    <div className="flex h-screen overflow-hidden bg-background">
+                        <Sidebar />
+                        <div className="flex flex-1 flex-col overflow-hidden">
+                            <Header />
+                            <main className="flex-1 overflow-y-auto p-6">
+                                {children}
+                            </main>
+                        </div>
                     </div>
-                </div>
+                </SidebarProvider>
             </body>
         </html>
     );

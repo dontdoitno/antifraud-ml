@@ -1,11 +1,24 @@
 "use client";
 
-import { Bell, Search, User } from "lucide-react";
+import { Bell, Search, User, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useSidebar } from "./sidebar-context";
 
 export function Header() {
+    const { toggleSidebar } = useSidebar();
+
     return (
         <header className="flex h-16 items-center justify-between border-b border-border/50 bg-card/30 backdrop-blur-xl px-6">
+            {/* Mobile Menu Button (optional, for mobile responsiveness) */}
+            <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden"
+                onClick={toggleSidebar}
+            >
+                <Menu className="h-5 w-5" />
+            </Button>
+
             {/* Search */}
             <div className="flex-1 max-w-md">
                 <div className="relative">

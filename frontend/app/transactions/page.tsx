@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Search, Filter, Download, ChevronDown } from "lucide-react";
+import { Search, Filter, Download, ChevronDown, Check, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,7 @@ import { loadTransactions, calculateRiskScore } from "@/lib/data-loader";
 import { Transaction } from "@/lib/types";
 import { formatCurrency, formatDate, truncateEmail, truncateId } from "@/lib/utils";
 
-type FilterType = 'all' | 'high-risk' | 'medium-risk' | 'low-risk' | 'no-3ds';
+type FilterType = 'all' | 'high-risk' | 'medium-risk' | 'low-risk' | 'no-3ds' | 'approved' | 'blocked' | 'review' | 'pending';
 
 export default function TransactionsPage() {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -27,6 +27,18 @@ export default function TransactionsPage() {
             setLoading(false);
         });
     }, []);
+
+    // Helper function to determine transaction status
+    const getTransactionStatus = (transaction: Transaction): 'approved' | 'blocked' | 'pending' | 'review' => {
+        const risk = calculateRiskScore(transaction);
+        if (transaction.is_fraud || risk.score >= 80) {
+            return 'blocked';
+        } else if (risk.score >= 50) {
+            return 'review';
+        } else {
+            return 'approved';
+        }
+    };
 
     useEffect(() => {
         let filtered = [...transactions];
@@ -54,6 +66,14 @@ export default function TransactionsPage() {
             filtered = transactionsWithRisk.filter(t => t.risk.score < 50).map(({ risk, ...t }) => t);
         } else if (activeFilter === 'no-3ds') {
             filtered = filtered.filter(t => !t.is_3ds_passed);
+        } else if (activeFilter === 'approved') {
+            filtered = filtered.filter(t => getTransactionStatus(t) === 'approved');
+        } else if (activeFilter === 'blocked') {
+            filtered = filtered.filter(t => getTransactionStatus(t) === 'blocked');
+        } else if (activeFilter === 'review') {
+            filtered = filtered.filter(t => getTransactionStatus(t) === 'review');
+        } else if (activeFilter === 'pending') {
+            filtered = filtered.filter(t => getTransactionStatus(t) === 'pending');
         }
 
         // Sort
@@ -81,12 +101,14 @@ export default function TransactionsPage() {
         );
     }
 
-    const filters: { value: FilterType; label: string; count: number }[] = [
+    const filters: { value: FilterType; label: string; count: number; category?: 'risk' | 'status' }[] = [
         { value: 'all', label: 'Все', count: transactions.length },
+        // Risk filters
         {
             value: 'high-risk',
             label: 'Высокий риск',
-            count: transactions.filter(t => calculateRiskScore(t).score >= 80).length
+            count: transactions.filter(t => calculateRiskScore(t).score >= 80).length,
+            category: 'risk'
         },
         {
             value: 'medium-risk',
@@ -94,17 +116,45 @@ export default function TransactionsPage() {
             count: transactions.filter(t => {
                 const score = calculateRiskScore(t).score;
                 return score >= 50 && score < 80;
-            }).length
+            }).length,
+            category: 'risk'
         },
         {
             value: 'low-risk',
             label: 'Низкий риск',
-            count: transactions.filter(t => calculateRiskScore(t).score < 50).length
+            count: transactions.filter(t => calculateRiskScore(t).score < 50).length,
+            category: 'risk'
         },
         {
             value: 'no-3ds',
             label: 'Без 3DS',
-            count: transactions.filter(t => !t.is_3ds_passed).length
+            count: transactions.filter(t => !t.is_3ds_passed).length,
+            category: 'risk'
+        },
+        // Status filters
+        {
+            value: 'approved',
+            label: 'Одобрена',
+            count: transactions.filter(t => getTransactionStatus(t) === 'approved').length,
+            category: 'status'
+        },
+        {
+            value: 'blocked',
+            label: 'Заблокирована',
+            count: transactions.filter(t => getTransactionStatus(t) === 'blocked').length,
+            category: 'status'
+        },
+        {
+            value: 'review',
+            label: 'На проверке',
+            count: transactions.filter(t => getTransactionStatus(t) === 'review').length,
+            category: 'status'
+        },
+        {
+            value: 'pending',
+            label: 'Ожидает',
+            count: transactions.filter(t => getTransactionStatus(t) === 'pending').length,
+            category: 'status'
         },
     ];
 
@@ -155,23 +205,51 @@ export default function TransactionsPage() {
                     </div>
 
                     {/* Filter Tabs */}
-                    <div className="flex gap-2 mt-4 overflow-x-auto pb-2">
-                        {filters.map((filter) => (
-                            <button
-                                key={filter.value}
-                                onClick={() => setActiveFilter(filter.value)}
-                                className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all whitespace-nowrap ${activeFilter === filter.value
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                                    }`}
-                            >
-                                {filter.label}
-                                <span className={`text-xs px-1.5 py-0.5 rounded-full ${activeFilter === filter.value ? 'bg-primary-foreground/20' : 'bg-background'
-                                    }`}>
-                                    {filter.count}
-                                </span>
-                            </button>
-                        ))}
+                    <div className="mt-4 space-y-3">
+                        {/* Risk Filters */}
+                        <div>
+                            <p className="text-xs font-medium text-muted-foreground mb-2">По риску:</p>
+                            <div className="flex gap-2 overflow-x-auto pb-2">
+                                {filters.filter(f => f.category === 'risk' || f.value === 'all').map((filter) => (
+                                    <button
+                                        key={filter.value}
+                                        onClick={() => setActiveFilter(filter.value)}
+                                        className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all whitespace-nowrap ${activeFilter === filter.value
+                                            ? 'bg-primary text-primary-foreground'
+                                            : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                                            }`}
+                                    >
+                                        {filter.label}
+                                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${activeFilter === filter.value ? 'bg-primary-foreground/20' : 'bg-background'
+                                            }`}>
+                                            {filter.count}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        {/* Status Filters */}
+                        <div>
+                            <p className="text-xs font-medium text-muted-foreground mb-2">По статусу:</p>
+                            <div className="flex gap-2 overflow-x-auto pb-2">
+                                {filters.filter(f => f.category === 'status').map((filter) => (
+                                    <button
+                                        key={filter.value}
+                                        onClick={() => setActiveFilter(filter.value)}
+                                        className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all whitespace-nowrap ${activeFilter === filter.value
+                                            ? 'bg-primary text-primary-foreground'
+                                            : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                                            }`}
+                                    >
+                                        {filter.label}
+                                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${activeFilter === filter.value ? 'bg-primary-foreground/20' : 'bg-background'
+                                            }`}>
+                                            {filter.count}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
@@ -219,7 +297,7 @@ export default function TransactionsPage() {
                                             case 'blocked':
                                                 return <Badge className="bg-red-500/10 text-red-500 border-red-500/20 text-xs">Заблокирована</Badge>;
                                             case 'review':
-                                                return <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 text-xs">На проверке</Badge>;
+                                                return <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 text-xs whitespace-nowrap">На проверке</Badge>;
                                             default:
                                                 return <Badge className="bg-gray-500/10 text-gray-500 border-gray-500/20 text-xs">Ожидает</Badge>;
                                         }
@@ -263,14 +341,8 @@ export default function TransactionsPage() {
                                             <td className="px-6 py-4">
                                                 <div className="flex justify-center">
                                                     {transaction.is_3ds_passed ? (
-                                                        <Badge className="bg-green-500/10 text-green-500 border-green-500/20 text-xs">
-                                                            ✓ Да
-                                                        </Badge>
-                                                    ) : (
-                                                        <Badge className="bg-red-500/10 text-red-500 border-red-500/20 text-xs">
-                                                            ✗ Нет
-                                                        </Badge>
-                                                    )}
+                                                        <Check className="h-4 w-4 text-green-500" />
+                                                    ) : <X className="h-4 w-4 text-red-500" />}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useSidebar } from "./sidebar-context";
+import { Button } from "@/components/ui/button";
 import {
     LayoutDashboard,
     CreditCard,
@@ -12,6 +14,8 @@ import {
     Settings,
     Shield,
     Plug,
+    ChevronLeft,
+    ChevronRight,
 } from "lucide-react";
 
 const navigation = [
@@ -26,18 +30,27 @@ const navigation = [
 
 export function Sidebar() {
     const pathname = usePathname();
+    const { isCollapsed, toggleSidebar } = useSidebar();
 
     return (
-        <div className="flex w-64 flex-col border-r border-border/50 bg-card/30 backdrop-blur-xl">
+        <div className={cn(
+            "flex flex-col border-r border-border/50 bg-card/30 backdrop-blur-xl transition-all duration-300 ease-in-out relative",
+            isCollapsed ? "w-20" : "w-64"
+        )}>
             {/* Logo */}
-            <div className="flex h-16 items-center gap-2 border-b border-border/50 px-6">
-                <div className="rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 p-2">
+            <div className={cn(
+                "flex h-16 items-center border-b border-border/50 px-6 transition-all duration-300",
+                isCollapsed ? "justify-center" : "gap-2"
+            )}>
+                <div className="rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 p-2 flex-shrink-0">
                     <Shield className="h-6 w-6 text-white" />
                 </div>
-                <div>
-                    <h1 className="text-lg font-bold">FraudShield</h1>
-                    <p className="text-xs text-muted-foreground">AI Protection</p>
-                </div>
+                {!isCollapsed && (
+                    <div className="overflow-hidden">
+                        <h1 className="text-lg font-bold whitespace-nowrap">FraudShield</h1>
+                        <p className="text-xs text-muted-foreground whitespace-nowrap">AI Protection</p>
+                    </div>
+                )}
             </div>
 
             {/* Navigation */}
@@ -50,17 +63,23 @@ export function Sidebar() {
                         <Link
                             key={item.name}
                             href={item.href}
+                            title={isCollapsed ? item.name : undefined}
                             className={cn(
-                                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
+                                "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-all group",
+                                isCollapsed ? "justify-center" : "gap-3",
                                 isActive
                                     ? "bg-primary/10 text-primary"
                                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                             )}
                         >
-                            <item.icon className="h-5 w-5" />
-                            {item.name}
-                            {isActive && (
-                                <div className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />
+                            <item.icon className="h-5 w-5 flex-shrink-0" />
+                            {!isCollapsed && (
+                                <>
+                                    <span className="whitespace-nowrap">{item.name}</span>
+                                    {isActive && (
+                                        <div className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />
+                                    )}
+                                </>
                             )}
                         </Link>
                     );
@@ -68,11 +87,29 @@ export function Sidebar() {
             </nav>
 
             {/* Footer */}
-            <div className="border-t border-border/50 p-4">
-                <div className="rounded-lg bg-gradient-to-br from-blue-500/10 to-purple-600/10 p-3 border border-blue-500/20">
-                    <p className="text-xs font-medium">ML Model v2.1</p>
-                    <p className="text-xs text-muted-foreground">Accuracy: 94.3%</p>
+            {!isCollapsed && (
+                <div className="border-t border-border/50 p-4">
+                    <div className="rounded-lg bg-gradient-to-br from-blue-500/10 to-purple-600/10 p-3 border border-blue-500/20">
+                        <p className="text-xs font-medium">ML Model v2.1</p>
+                        <p className="text-xs text-muted-foreground">Accuracy: 94.3%</p>
+                    </div>
                 </div>
+            )}
+
+            {/* Toggle Button */}
+            <div className="absolute -right-3 top-20 z-10">
+                <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-6 w-6 rounded-full bg-card border-2 shadow-md hover:bg-accent"
+                    onClick={toggleSidebar}
+                >
+                    {isCollapsed ? (
+                        <ChevronRight className="h-4 w-4" />
+                    ) : (
+                        <ChevronLeft className="h-4 w-4" />
+                    )}
+                </Button>
             </div>
         </div>
     );
