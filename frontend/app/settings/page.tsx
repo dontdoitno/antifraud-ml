@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Settings as SettingsIcon, Key, Users, CreditCard, Bell } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 
 export default function SettingsPage() {
     const [emailNotifications, setEmailNotifications] = useState(true);
@@ -73,48 +74,36 @@ export default function SettingsPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-3">
-                            <label className="flex items-center justify-between p-3 rounded-lg border border-border cursor-pointer hover:bg-accent/50 transition-colors group">
-                                <span className="text-sm font-medium">Email уведомления</span>
-                                <div className="relative inline-flex items-center">
-                                    <input
-                                        type="checkbox"
-                                        checked={emailNotifications}
-                                        onChange={(e) => setEmailNotifications(e.target.checked)}
-                                        className="sr-only peer"
-                                    />
-                                    <div className="relative w-11 h-6 bg-gray-300 dark:bg-gray-600 rounded-full shadow-inner peer-checked:bg-primary transition-colors duration-200 ease-in-out cursor-pointer">
-                                        <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-200 ease-in-out peer-checked:translate-x-5"></div>
-                                    </div>
+                            <div className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors">
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-medium">Email уведомления</span>
+                                    <span className="text-xs text-muted-foreground mt-0.5">Получать уведомления на email</span>
                                 </div>
-                            </label>
-                            <label className="flex items-center justify-between p-3 rounded-lg border border-border cursor-pointer hover:bg-accent/50 transition-colors group">
-                                <span className="text-sm font-medium">Telegram уведомления</span>
-                                <div className="relative inline-flex items-center">
-                                    <input
-                                        type="checkbox"
-                                        checked={telegramNotifications}
-                                        onChange={(e) => setTelegramNotifications(e.target.checked)}
-                                        className="sr-only peer"
-                                    />
-                                    <div className="relative w-11 h-6 bg-gray-300 dark:bg-gray-600 rounded-full shadow-inner peer-checked:bg-primary transition-colors duration-200 ease-in-out cursor-pointer">
-                                        <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-200 ease-in-out peer-checked:translate-x-5"></div>
-                                    </div>
+                                <Switch
+                                    checked={emailNotifications}
+                                    onCheckedChange={setEmailNotifications}
+                                />
+                            </div>
+                            <div className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors">
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-medium">Telegram уведомления</span>
+                                    <span className="text-xs text-muted-foreground mt-0.5">Получать уведомления в Telegram</span>
                                 </div>
-                            </label>
-                            <label className="flex items-center justify-between p-3 rounded-lg border border-border cursor-pointer hover:bg-accent/50 transition-colors group">
-                                <span className="text-sm font-medium">Webhook события</span>
-                                <div className="relative inline-flex items-center">
-                                    <input
-                                        type="checkbox"
-                                        checked={webhookEvents}
-                                        onChange={(e) => setWebhookEvents(e.target.checked)}
-                                        className="sr-only peer"
-                                    />
-                                    <div className="relative w-11 h-6 bg-gray-300 dark:bg-gray-600 rounded-full shadow-inner peer-checked:bg-primary transition-colors duration-200 ease-in-out cursor-pointer">
-                                        <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-200 ease-in-out peer-checked:translate-x-5"></div>
-                                    </div>
+                                <Switch
+                                    checked={telegramNotifications}
+                                    onCheckedChange={setTelegramNotifications}
+                                />
+                            </div>
+                            <div className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors">
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-medium">Webhook события</span>
+                                    <span className="text-xs text-muted-foreground mt-0.5">Отправлять события через webhook</span>
                                 </div>
-                            </label>
+                                <Switch
+                                    checked={webhookEvents}
+                                    onCheckedChange={setWebhookEvents}
+                                />
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
@@ -130,8 +119,8 @@ export default function SettingsPage() {
                     <CardContent>
                         <div className="space-y-3">
                             <div className="p-4 rounded-lg bg-gradient-to-br from-blue-500/10 to-purple-600/10 border border-blue-500/20">
-                                <p className="text-sm font-semibold mb-1">Pro Plan</p>
-                                <p className="text-2xl font-bold mb-2">₽12,990 <span className="text-sm font-normal text-muted-foreground">/мес</span></p>
+                                <p className="text-sm font-semibold mb-1">Рост</p>
+                                <p className="text-2xl font-bold mb-2">₽4 990 <span className="text-sm font-normal text-muted-foreground">/мес</span></p>
                                 <p className="text-xs text-muted-foreground">До 10,000 транзакций/месяц</p>
                             </div>
                             <Button variant="outline" className="w-full">Изменить план</Button>
