@@ -1,6 +1,8 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import toast from 'react-hot-toast';
 import Link from "next/link";
 import { ArrowLeft, Shield, User, Smartphone, MapPin, Package, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,17 +13,29 @@ import { Transaction, RiskAssessment } from "@/lib/types";
 import { formatCurrency, formatDate, formatPhoneNumber } from "@/lib/utils";
 
 export default function TransactionDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const router = useRouter();
     const resolvedParams = use(params);
     const [transaction, setTransaction] = useState<Transaction | null>(null);
     const [risk, setRisk] = useState<RiskAssessment | null>(null);
     const [loading, setLoading] = useState(true);
+    const [actionLoading, setActionLoading] = useState(false);
+    const [transactionStatus, setTransactionStatus] = useState<'approved' | 'blocked' | 'pending' | 'review'>('pending');
 
     useEffect(() => {
         loadTransactions().then((transactions) => {
             const found = transactions.find(t => t.transaction_id === resolvedParams.id);
             if (found) {
                 setTransaction(found);
-                setRisk(calculateRiskScore(found));
+                const calculatedRisk = calculateRiskScore(found);
+                setRisk(calculatedRisk);
+                // Determine initial status
+                if (found.is_fraud || calculatedRisk.score >= 80) {
+                    setTransactionStatus('blocked');
+                } else if (calculatedRisk.score >= 50) {
+                    setTransactionStatus('review');
+                } else {
+                    setTransactionStatus('approved');
+                }
             }
             setLoading(false);
         });
@@ -58,6 +72,64 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
         return <CheckCircle className="h-6 w-6 text-risk-low" />;
     };
 
+    const handleApprove = async () => {
+        setActionLoading(true);
+        try {
+            // Здесь будет запрос на сервер
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            setTransactionStatus('approved');
+            toast.success('Транзакция успешно одобрена!', {
+                icon: '✅',
+            });
+            setActionLoading(false);
+            // Обновляем транзакцию в списке через localStorage или состояние
+            if (transaction) {
+                const updatedTransaction = { ...transaction, is_fraud: false };
+                setTransaction(updatedTransaction);
+            }
+        } catch (error) {
+            toast.error('Ошибка при одобрении транзакции');
+            setActionLoading(false);
+        }
+    };
+
+    const handleBlock = async () => {
+        setActionLoading(true);
+        try {
+            // Здесь будет запрос на сервер
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            setTransactionStatus('blocked');
+            toast.success('Транзакция заблокирована', {
+                icon: '🚫',
+            });
+            setActionLoading(false);
+            // Обновляем транзакцию в списке через localStorage или состояние
+            if (transaction) {
+                const updatedTransaction = { ...transaction, is_fraud: true };
+                setTransaction(updatedTransaction);
+            }
+        } catch (error) {
+            toast.error('Ошибка при блокировке транзакции');
+            setActionLoading(false);
+        }
+    };
+
+    const handleRequestReview = async () => {
+        setActionLoading(true);
+        try {
+            // Здесь будет запрос на сервер
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            setTransactionStatus('review');
+            toast.success('Запрос на проверку отправлен', {
+                icon: '📋',
+            });
+            setActionLoading(false);
+        } catch (error) {
+            toast.error('Ошибка при отправке запроса');
+            setActionLoading(false);
+        }
+    };
+
     return (
         <div className="space-y-6 animate-fade-in">
             {/* Header */}
@@ -68,18 +140,46 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                     </Button>
                 </Link>
                 <div className="flex-1">
-                    <h1 className="text-3xl font-bold tracking-tight">Детали транзакции</h1>
+                    <div className="flex items-center gap-3">
+                        <h1 className="text-3xl font-bold tracking-tight">Детали транзакции</h1>
+                        {transactionStatus === 'approved' && (
+                            <Badge className="bg-green-500/10 text-green-500 border-green-500/20">Одобрена</Badge>
+                        )}
+                        {transactionStatus === 'blocked' && (
+                            <Badge className="bg-red-500/10 text-red-500 border-red-500/20">Заблокирована</Badge>
+                        )}
+                        {transactionStatus === 'review' && (
+                            <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">На проверке</Badge>
+                        )}
+                        {transactionStatus === 'pending' && (
+                            <Badge className="bg-gray-500/10 text-gray-500 border-gray-500/20">Ожидает</Badge>
+                        )}
+                    </div>
                     <p className="text-muted-foreground">ID: {transaction.transaction_id}</p>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20 hover:bg-green-500/20">
-                        Одобрить
+                    <Button
+                        variant="outline"
+                        className="bg-green-500/10 text-green-500 border-green-500/20 hover:bg-green-500/20"
+                        onClick={handleApprove}
+                        disabled={actionLoading}
+                    >
+                        {actionLoading ? 'Обработка...' : 'Одобрить'}
                     </Button>
-                    <Button variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20">
-                        Заблокировать
+                    <Button
+                        variant="outline"
+                        className="bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20"
+                        onClick={handleBlock}
+                        disabled={actionLoading}
+                    >
+                        {actionLoading ? 'Обработка...' : 'Заблокировать'}
                     </Button>
-                    <Button variant="outline">
-                        Запросить проверку
+                    <Button
+                        variant="outline"
+                        onClick={handleRequestReview}
+                        disabled={actionLoading}
+                    >
+                        {actionLoading ? 'Обработка...' : 'Запросить проверку'}
                     </Button>
                 </div>
             </div>
@@ -104,7 +204,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                                         cx="80"
                                         cy="80"
                                         r="70"
-                                        stroke={risk.score >= 80 ? '#ef4444' : risk.score >= 50 ? '#f59e0b' : '#10b981 '}
+                                        stroke={risk.score >= 80 ? '#ef4444' : risk.score >= 50 ? '#f59e0b' : '#10b981'}
                                         strokeWidth="12"
                                         fill="none"
                                         strokeDasharray={`${(risk.score / 100) * 439.6} 439.6`}
@@ -121,15 +221,15 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                         </div>
 
                         {/* Risk Info */}
-                        <div className="md:col-span-2 space-y-4">
-                            <div>
-                                <div className="flex items-center gap-2 mb-2">
+                        <div className="md:col-span-2 space-y-4 flex flex-col justify-center items-center md:items-start">
+                            <div className="w-full">
+                                <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
                                     <h3 className="text-lg font-semibold">Оценка риска</h3>
                                     <Badge variant="risk" riskScore={risk.score}>
                                         {risk.level === 'high' ? 'Высокий риск' : risk.level === 'medium' ? 'Средний риск' : 'Низкий риск'}
                                     </Badge>
                                 </div>
-                                <p className="text-sm text-muted-foreground">
+                                <p className="text-sm text-muted-foreground text-center md:text-left">
                                     Уверенность модели: <span className="font-semibold">{(risk.confidence * 100).toFixed(1)}%</span>
                                 </p>
                             </div>
@@ -183,8 +283,8 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                                 <div
                                     key={index}
                                     className={`flex items-start gap-3 p-4 rounded-lg border ${factor.impact === 'high' ? 'border-risk-high/20 bg-risk-high/5' :
-                                            factor.impact === 'medium' ? 'border-risk-medium/20 bg-risk-medium/5' :
-                                                'border-risk-low/20 bg-risk-low/5'
+                                        factor.impact === 'medium' ? 'border-risk-medium/20 bg-risk-medium/5' :
+                                            'border-risk-low/20 bg-risk-low/5'
                                         }`}
                                 >
                                     <div className="mt-0.5">
@@ -201,11 +301,11 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                                             <h4 className="font-semibold text-sm">{factor.name}</h4>
                                             <Badge
                                                 className={`text-xs ${factor.impact === 'high' ? 'bg-risk-high/10 text-risk-high border-risk-high/20' :
-                                                        factor.impact === 'medium' ? 'bg-risk-medium/10 text-risk-medium border-risk-medium/20' :
-                                                            'bg-risk-low/10 text-risk-low border-risk-low/20'
+                                                    factor.impact === 'medium' ? 'bg-risk-medium/10 text-risk-medium border-risk-medium/20' :
+                                                        'bg-risk-low/10 text-risk-low border-risk-low/20'
                                                     }`}
                                             >
-                                                {factor.impact === 'high' ? 'Высокий' : factor.impact === 'medium' ? 'Средний' : 'Низкий'} impact
+                                                {factor.impact === 'high' ? 'Высокое' : factor.impact === 'medium' ? 'Среднее' : 'Низкое'} влияние
                                             </Badge>
                                         </div>
                                         <p className="text-sm text-muted-foreground">{factor.description}</p>
@@ -276,7 +376,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                             <CardTitle>Устройство и IP</CardTitle>
                         </div>
                     </CardHeader>
-                    <CardContent className="space-y-3">
+                    <CardContent className="space-y-3 flex flex-col">
                         <div>
                             <p className="text-xs text-muted-foreground mb-1">IP адрес</p>
                             <p className="font-mono text-sm">{transaction.ip}</p>
@@ -304,7 +404,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                                 <p className="text-sm font-semibold text-risk-high">⚠️ Эмулятор обнаружен</p>
                             </div>
                         )}
-                        <div className="grid grid-cols-2 gap-3 pt-3">
+                        <div className="grid grid-cols-2 gap-3 mt-auto pt-3">
                             <div className="rounded-lg border border-border p-3">
                                 <p className="text-xs text-muted-foreground mb-1">Velocity IP/24h</p>
                                 <p className="text-2xl font-bold">{transaction.velocity_same_ip_24h}</p>
@@ -328,7 +428,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                     <CardContent className="space-y-3">
                         <div>
                             <p className="text-xs text-muted-foreground mb-1">Тип доставки</p>
-                            <p className="text-sm capitalize">{transaction.delivery_type}</p>
+                            <p className="text-sm">{transaction.delivery_type === 'pickup' ? 'Самовывоз' : transaction.delivery_type === 'courier' ? 'Курьер' : transaction.delivery_type}</p>
                         </div>
                         <div>
                             <p className="text-xs text-muted-foreground mb-1">Адрес доставки</p>

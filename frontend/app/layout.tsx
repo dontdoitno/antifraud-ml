@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
+import { ToastProvider } from "@/components/ui/toast-provider";
 
 const inter = Inter({ subsets: ["latin", "cyrillic"] });
 
@@ -19,6 +20,7 @@ export default function RootLayout({
     return (
         <html lang="ru" className="dark">
             <body className={inter.className}>
+                <ToastProvider />
                 <div className="flex h-screen overflow-hidden bg-background">
                     <Sidebar />
                     <div className="flex flex-1 flex-col overflow-hidden">

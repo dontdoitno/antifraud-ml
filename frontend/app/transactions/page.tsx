@@ -125,9 +125,9 @@ export default function TransactionsPage() {
             {/* Filters and Search */}
             <Card>
                 <CardContent className="p-4">
-                    <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex flex-col sm:flex-row gap-4 items-center">
                         {/* Search */}
-                        <div className="flex-1">
+                        <div className="flex-1 w-full">
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                 <input
@@ -161,8 +161,8 @@ export default function TransactionsPage() {
                                 key={filter.value}
                                 onClick={() => setActiveFilter(filter.value)}
                                 className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all whitespace-nowrap ${activeFilter === filter.value
-                                        ? 'bg-primary text-primary-foreground'
-                                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
                                     }`}
                             >
                                 {filter.label}
@@ -195,12 +195,36 @@ export default function TransactionsPage() {
                                     <th className="px-6 py-3 text-right font-medium">Сумма</th>
                                     <th className="px-6 py-3 text-center font-medium">Риск</th>
                                     <th className="px-6 py-3 text-center font-medium">3DS</th>
+                                    <th className="px-6 py-3 text-center font-medium">Статус</th>
                                     <th className="px-6 py-3 text-right font-medium">Действия</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
                                 {filteredTransactions.map((transaction) => {
                                     const risk = calculateRiskScore(transaction);
+                                    // Determine status based on risk score and fraud flag
+                                    let status: 'approved' | 'blocked' | 'pending' | 'review' = 'pending';
+                                    if (transaction.is_fraud || risk.score >= 80) {
+                                        status = 'blocked';
+                                    } else if (risk.score >= 50) {
+                                        status = 'review';
+                                    } else {
+                                        status = 'approved';
+                                    }
+
+                                    const getStatusBadge = () => {
+                                        switch (status) {
+                                            case 'approved':
+                                                return <Badge className="bg-green-500/10 text-green-500 border-green-500/20 text-xs">Одобрена</Badge>;
+                                            case 'blocked':
+                                                return <Badge className="bg-red-500/10 text-red-500 border-red-500/20 text-xs">Заблокирована</Badge>;
+                                            case 'review':
+                                                return <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 text-xs">На проверке</Badge>;
+                                            default:
+                                                return <Badge className="bg-gray-500/10 text-gray-500 border-gray-500/20 text-xs">Ожидает</Badge>;
+                                        }
+                                    };
+
                                     return (
                                         <tr
                                             key={transaction.transaction_id}
@@ -239,10 +263,19 @@ export default function TransactionsPage() {
                                             <td className="px-6 py-4">
                                                 <div className="flex justify-center">
                                                     {transaction.is_3ds_passed ? (
-                                                        <span className="text-xs text-green-500">✓</span>
+                                                        <Badge className="bg-green-500/10 text-green-500 border-green-500/20 text-xs">
+                                                            ✓ Да
+                                                        </Badge>
                                                     ) : (
-                                                        <span className="text-xs text-red-500">✗</span>
+                                                        <Badge className="bg-red-500/10 text-red-500 border-red-500/20 text-xs">
+                                                            ✗ Нет
+                                                        </Badge>
                                                     )}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex justify-center">
+                                                    {getStatusBadge()}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-right">
