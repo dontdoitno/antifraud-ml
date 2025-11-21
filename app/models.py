@@ -46,6 +46,67 @@ class TransactionRequest(BaseModel):
     user_agent: Optional[str] = Field(None, description="User Agent браузера")
     location: Optional[str] = Field(None, description="Геолокация")
     timestamp: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc))
+    
+    # Поля для отображения на фронтенде
+    email: Optional[str] = Field(None, description="Email клиента")
+    product_id: Optional[str] = Field(None, description="ID товара")
+    product_name: Optional[str] = Field(None, description="Название товара")
+    category: Optional[str] = Field(None, description="Категория товара")
+    sku: Optional[str] = Field(None, description="SKU товара")
+    customer_id: Optional[str] = Field(None, description="ID клиента")
+    payment_method: Optional[str] = Field(None, description="Метод оплаты")
+    currency: Optional[str] = Field("RUB", description="Валюта")
+    is_high_risk_item: Optional[bool] = Field(False, description="Товар высокого риска")
+    
+    # Данные карты
+    card_bin: Optional[str] = Field(None, description="BIN карты")
+    card_last4: Optional[str] = Field(None, description="Последние 4 цифры карты")
+    issuer_country: Optional[str] = Field(None, description="Страна эмитента карты")
+    is_3ds_passed: Optional[bool] = Field(False, description="Пройдена ли 3DS верификация")
+    attempt_count: Optional[int] = Field(1, description="Количество попыток оплаты")
+    payment_gateway: Optional[str] = Field(None, description="Платежный шлюз")
+    
+    # Данные клиента
+    email_domain: Optional[str] = Field(None, description="Домен email")
+    email_first_seen: Optional[str] = Field(None, description="Когда email был впервые зарегистрирован")
+    phone: Optional[str] = Field(None, description="Телефон")
+    phone_verified: Optional[bool] = Field(False, description="Телефон подтвержден")
+    previous_orders: Optional[int] = Field(0, description="Количество предыдущих заказов")
+    previous_chargebacks: Optional[int] = Field(0, description="Количество предыдущих чарджбеков")
+    
+    # IP и геолокация
+    ip_country: Optional[str] = Field(None, description="Страна по IP")
+    ip_region: Optional[str] = Field(None, description="Регион по IP")
+    proxy: Optional[bool] = Field(False, description="Использование прокси")
+    vpn: Optional[bool] = Field(False, description="Использование VPN")
+    tor: Optional[bool] = Field(False, description="Использование Tor")
+    
+    # Устройство
+    device_os: Optional[str] = Field(None, description="ОС устройства")
+    browser: Optional[str] = Field(None, description="Браузер")
+    is_emulator: Optional[bool] = Field(False, description="Использование эмулятора")
+    
+    # Доставка
+    delivery_type: Optional[str] = Field(None, description="Тип доставки (courier/pickup)")
+    delivery_address: Optional[str] = Field(None, description="Адрес доставки")
+    address_verified: Optional[bool] = Field(False, description="Адрес подтвержден")
+    billing_address: Optional[str] = Field(None, description="Платежный адрес")
+    addresses_match: Optional[bool] = Field(False, description="Адреса совпадают")
+    shipping_region: Optional[str] = Field(None, description="Регион доставки")
+    delivery_person: Optional[str] = Field(None, description="Получатель")
+    delivery_signature_required: Optional[bool] = Field(False, description="Требуется подпись")
+    last_mile_provider: Optional[str] = Field(None, description="Служба доставки")
+    
+    # Поведенческие метрики
+    session_length_sec: Optional[int] = Field(0, description="Длительность сессии в секундах")
+    pages_viewed: Optional[int] = Field(0, description="Просмотрено страниц")
+    time_on_checkout_sec: Optional[int] = Field(0, description="Время на странице оформления")
+    added_card_count: Optional[int] = Field(1, description="Количество добавленных карт")
+    cart_abandon_rate: Optional[float] = Field(0.0, description="Процент брошенных корзин")
+    
+    # Velocity метрики
+    velocity_same_card_1h: Optional[int] = Field(0, description="Транзакций с той же карты за час")
+    velocity_same_ip_24h: Optional[int] = Field(0, description="Транзакций с того же IP за 24 часа")
 
     @field_validator('amount')
     @classmethod
@@ -95,7 +156,8 @@ class TransactionResponse(BaseModel):
 
     recommendations: List[str] = Field(default_factory=list, description="Рекомендации")
     requires_3d_secure: bool = Field(False, description="Требуется ли 3D-Secure")
-    should_block: bool = Field(False, description="Следует ли блокировать транзакцию")
+    should_block: bool = Field(False, description="Следует ли заблокировать транзакцию")
+    risk_factors: List[str] = Field(default_factory=list, description="Факторы риска")
 
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 

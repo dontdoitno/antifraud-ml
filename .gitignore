@@ -16,6 +16,7 @@ eggs/
 .eggs/
 lib/
 lib64/
+!frontend/lib/
 parts/
 sdist/
 var/
@@ -211,3 +212,8 @@ __marimo__/
 data/raw/*.csv
 data/raw/*.xlsx
 data/raw/*.xls
+
+# Frontend dependencies and build artifacts
+node_modules/
+.next/
+*.log
