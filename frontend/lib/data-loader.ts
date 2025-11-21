@@ -206,7 +206,7 @@ export function calculateRiskScore(transaction: Transaction): RiskAssessment {
     }
 
     // High velocity
-    if (transaction.velocity_same_card_1h > 2) {
+    if (transaction.velocity_same_card_1h && transaction.velocity_same_card_1h > 2) {
         score += 20;
         factors.push({
             name: 'Высокая частота транзакций',
@@ -216,7 +216,7 @@ export function calculateRiskScore(transaction: Transaction): RiskAssessment {
         });
     }
 
-    if (transaction.velocity_same_ip_24h > 5) {
+    if (transaction.velocity_same_ip_24h && transaction.velocity_same_ip_24h > 5) {
         score += 15;
         factors.push({
             name: 'Множество транзакций с IP',

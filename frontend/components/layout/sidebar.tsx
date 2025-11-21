@@ -7,25 +7,20 @@ import { useSidebar } from "./sidebar-context";
 import { Button } from "@/components/ui/button";
 import {
     LayoutDashboard,
-    CreditCard,
-    Users,
-    BarChart3,
     FileText,
+    BarChart3,
     Settings,
     Shield,
-    Plug,
     ChevronLeft,
     ChevronRight,
 } from "lucide-react";
+import type { Route } from "next";
 
 const navigation = [
-    { name: "Обзор", href: "/", icon: LayoutDashboard },
-    { name: "Транзакции", href: "/transactions", icon: CreditCard },
-    { name: "Клиенты", href: "/customers", icon: Users },
-    { name: "Аналитика", href: "/analytics", icon: BarChart3 },
-    { name: "Доказательства", href: "/evidence", icon: FileText },
-    { name: "Интеграции", href: "/integrations", icon: Plug },
-    { name: "Настройки", href: "/settings", icon: Settings },
+    { name: 'Дашборд', href: '/' as Route, icon: LayoutDashboard },
+    { name: 'Транзакции', href: '/transactions' as Route, icon: FileText },
+    { name: 'Аналитика', href: '/analytics' as Route, icon: BarChart3 },
+    { name: 'Настройки', href: '/settings' as Route, icon: Settings },
 ];
 
 export function Sidebar() {

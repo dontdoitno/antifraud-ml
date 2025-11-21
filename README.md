@@ -2,7 +2,7 @@
 
 Облачный сервис на основе искусственного интеллекта для обнаружения мошенничества и предотвращения chargeback в реальном времени.
 
-![Ссылка на доку API](https://antifraud-ml-production.up.railway.app/docs#/)
+[Ссылка на доку API](https://antifraud-ml-production.up.railway.app/docs#/)
 
 ---
 
