@@ -2,7 +2,7 @@
 FraudGuard AI - Главное FastAPI приложение
 Облачный сервис для обнаружения мошенничества в реальном времени
 """
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
@@ -21,6 +21,9 @@ from app.ml.fraud_detector import FraudDetector
 from services.risk_analyzer import RiskAnalyzer
 from services.evidence_collector import EvidenceCollector
 from app.config import settings
+from app.ws import manager, broadcast_analysis
+import json
+import os
 
 # Настройка логирования
 logging.basicConfig(
@@ -173,8 +176,22 @@ async def analyze_transaction(
             recommendations=recommendations,
             requires_3d_secure=risk_assessment.requires_3d_secure,
             should_block=risk_assessment.should_block,
+            risk_factors=risk_assessment.risk_factors,
             timestamp=datetime.now(timezone.utc)
         )
+
+        # 5. Broadcast результатов через WebSocket (для демо)
+        background_tasks.add_task(
+            broadcast_analysis,
+            response.transaction_id,
+            response.risk_score,
+            response.fraud_probability,
+            response.is_fraud,
+            response.timestamp
+        )
+        
+        # 6. Сохранение транзакции в файл
+        background_tasks.add_task(_save_transaction_to_file, transaction, response)
 
         logger.info(
             f"Анализ завершен: fraud_prob={fraud_probability:.4f}, "
@@ -224,7 +241,108 @@ async def get_statistics():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.websocket("/ws/stream")
+async def websocket_endpoint(websocket: WebSocket):
+    """WebSocket endpoint для real-time стриминга результатов анализа"""
+    await manager.connect(websocket)
+    try:
+        while True:
+            # Ожидание сообщений от клиента (keep-alive)
+            data = await websocket.receive_text()
+            # Echo для проверки соединения
+            if data == "ping":
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+        logger.info("WebSocket client disconnected")
+
+
 # === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
+
+def _save_transaction_to_file(transaction: TransactionRequest, response: TransactionResponse):
+    """Сохранить транзакцию в JSON файл для отображения на фронтенде"""
+    try:
+        transactions_file = "data/api_transactions.json"
+        
+        # Загрузить существующие транзакции
+        if os.path.exists(transactions_file):
+            with open(transactions_file, 'r', encoding='utf-8') as f:
+                transactions = json.load(f)
+        else:
+            transactions = []
+        
+        # Создать объект транзакции для фронтенда
+        transaction_data = {
+            "transaction_id": response.transaction_id,
+            "timestamp": response.timestamp.isoformat(),
+            "product_id": getattr(transaction, 'product_id', '') or "PRODUCT-001",
+            "product_name": getattr(transaction, 'product_name', '') or "Товар",
+            "category": getattr(transaction, 'category', '') or "Электроника",
+            "sku": f"SKU-{response.transaction_id[-6:]}",
+            "amount": transaction.amount,
+            "currency": getattr(transaction, 'currency', '') or "RUB",
+            "payment_method": getattr(transaction, 'payment_method', '') or "card",
+            "is_high_risk_item": response.risk_score >= 70,
+            
+            # Информация о клиенте
+            "customer_id": getattr(transaction, 'customer_id', '') or getattr(transaction, 'nameOrig', '') or "CUSTOMER-001",
+            "email": getattr(transaction, 'email', '') or f"customer@example.com",
+            "email_domain": getattr(transaction, 'email', '').split('@')[1] if getattr(transaction, 'email', '') and '@' in getattr(transaction, 'email', '') else "example.com",
+            "phone": "+7**********",
+            "phone_verified": True,
+            "previous_orders": 0,
+            "previous_chargebacks": 0,
+            
+            # IP и геолокация
+            "ip": transaction.ip_address or "0.0.0.0",
+            "ip_country": getattr(transaction, 'ip_country', '') or "RU",
+            "ip_region": getattr(transaction, 'ip_region', '') or transaction.location or "Москва",
+            "proxy": False,
+            "vpn": False,
+            "tor": False,
+            
+            # Устройство
+            "device_id": transaction.device_id or "device_unknown",
+            "device_os": getattr(transaction, 'device_os', '') or "Windows",
+            "browser": getattr(transaction, 'browser', '') or "Chrome 120",
+            "is_emulator": False,
+            
+            # 3DS
+            "is_3ds_passed": getattr(transaction, 'is_3ds_passed', False),
+            "attempt_count": 1,
+            
+            #Результаты анализа
+            "is_fraud": response.is_fraud,
+            "fraud_probability": response.fraud_probability,
+            "risk_level": response.risk_level,
+            "risk_score": response.risk_score,  # Используем risk_score из response!
+            "risk_factors": response.risk_factors,  # Сохраняем факторы риска!
+            "fraud_type": "Финансовое мошенничество" if response.is_fraud else "",
+            "chargeback_code": "" if not response.is_fraud else "FRAUD",
+            "chargeback_date": "",
+            
+            # Дополнительно
+            "payment_gateway": "API",
+            "delivery_type": "courier",
+            "session_length_sec": 120,
+            "pages_viewed": 5,
+        }
+        
+        # Добавить в начало списка (свежие сначала)
+        transactions.insert(0, transaction_data)
+        
+        # Ограничить до 1000 транзакций
+        transactions = transactions[:1000]
+        
+        # Сохранить
+        os.makedirs("data", exist_ok=True)
+        with open(transactions_file, 'w', encoding='utf-8') as f:
+            json.dump(transactions, f, ensure_ascii=False, indent=2, default=str)
+            
+        logger.info(f"Транзакция {response.transaction_id} сохранена в {transactions_file}")
+    except Exception as e:
+        logger.error(f"Ошибка сохранения транзакции: {str(e)}")
+
 
 def _generate_recommendations(
     risk_assessment: RiskAssessment,

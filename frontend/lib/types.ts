@@ -47,12 +47,18 @@ export interface Transaction {
     time_on_checkout_sec: number;
     added_card_count: number;
     cart_abandon_rate: number;
-    velocity_same_card_1h: number;
-    velocity_same_ip_24h: number;
+    velocity_same_card_1h?: number;
+    velocity_same_ip_24h?: number;
     is_fraud: boolean;
-    fraud_type: string;
-    chargeback_code: string;
-    chargeback_date: string;
+    fraud_type?: string;
+    chargeback_code?: string;
+    chargeback_date?: string;
+
+    // Результаты ML анализа (для API транзакций)
+    risk_score?: number;
+    fraud_probability?: number;
+    risk_level?: string;
+    risk_factors?: string[];  // Факторы риска из backend
 }
 
 export interface RiskAssessment {

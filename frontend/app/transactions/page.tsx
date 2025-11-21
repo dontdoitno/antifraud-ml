@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { Search, Filter, Download, ChevronDown, Check, X } from "lucide-react";
+import { Search, Filter, Download, ChevronDown, Check, X, Wifi, WifiOff, Activity } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,9 @@ export default function TransactionsPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [activeFilter, setActiveFilter] = useState<FilterType>('all');
     const [sortBy, setSortBy] = useState<'date' | 'amount' | 'risk'>('date');
+    const [isWsConnected, setIsWsConnected] = useState(false);
+    const [newTransactionIds, setNewTransactionIds] = useState<Set<string>>(new Set());
+    const wsRef = useRef<WebSocket | null>(null);
 
     useEffect(() => {
         loadTransactions().then((data) => {
@@ -26,6 +29,89 @@ export default function TransactionsPage() {
             setFilteredTransactions(data);
             setLoading(false);
         });
+
+        // WebSocket connection for real-time updates
+        const connectWebSocket = () => {
+            try {
+                const ws = new WebSocket('ws://localhost:8000/ws/stream');
+
+                ws.onopen = () => {
+                    console.log('WebSocket connected');
+                    setIsWsConnected(true);
+
+                    // Send ping every 30 seconds to keep connection alive
+                    const pingInterval = setInterval(() => {
+                        if (ws.readyState === WebSocket.OPEN) {
+                            ws.send('ping');
+                        }
+                    }, 30000);
+
+                    ws.onclose = () => {
+                        clearInterval(pingInterval);
+                    };
+                };
+
+                ws.onmessage = (event) => {
+                    try {
+                        // Ignore pong messages
+                        if (event.data === 'pong') return;
+
+                        const data = JSON.parse(event.data);
+
+                        // Mark transaction as new for animation
+                        setNewTransactionIds(prev => new Set(prev).add(data.transaction_id));
+
+                        // Remove "new" status after 5 seconds
+                        setTimeout(() => {
+                            setNewTransactionIds(prev => {
+                                const newSet = new Set(prev);
+                                newSet.delete(data.transaction_id);
+                                return newSet;
+                            });
+                        }, 5000);
+
+                        console.log('New transaction received:', data);
+
+                        // Reload transactions to get the full transaction data
+                        loadTransactions().then((data) => {
+                            setTransactions(data);
+                        });
+                    } catch (error) {
+                        console.error('Error parsing WebSocket message:', error);
+                    }
+                };
+
+                ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    setIsWsConnected(false);
+                };
+
+                ws.onclose = () => {
+                    console.log('WebSocket disconnected');
+                    setIsWsConnected(false);
+
+                    // Attempt reconnection after 5 seconds
+                    setTimeout(() => {
+                        console.log('Attempting to reconnect...');
+                        connectWebSocket();
+                    }, 5000);
+                };
+
+                wsRef.current = ws;
+            } catch (error) {
+                console.error('Failed to connect to WebSocket:', error);
+                setIsWsConnected(false);
+            }
+        };
+
+        connectWebSocket();
+
+        // Cleanup on unmount
+        return () => {
+            if (wsRef.current) {
+                wsRef.current.close();
+            }
+        };
     }, []);
 
     // Helper function to determine transaction status
@@ -162,9 +248,25 @@ export default function TransactionsPage() {
         <div className="space-y-6 animate-fade-in">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Транзакции</h1>
-                    <p className="text-muted-foreground">Управление и мониторинг всех платежных операций</p>
+                <div className="flex items-center gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight">Транзакции</h1>
+                        <p className="text-muted-foreground">Управление и мониторинг всех платежных операций</p>
+                    </div>
+                    {/* WebSocket Status Indicator */}
+                    <div className="flex items-center gap-2 text-sm">
+                        {isWsConnected ? (
+                            <>
+                                <Activity className="h-4 w-4 text-green-500 animate-pulse" />
+                                <span className="text-green-600 font-medium">Live</span>
+                            </>
+                        ) : (
+                            <>
+                                <WifiOff className="h-4 w-4 text-gray-400" />
+                                <span className="text-gray-500">Offline</span>
+                            </>
+                        )}
+                    </div>
                 </div>
                 <Button className="gap-2">
                     <Download className="h-4 w-4" />
@@ -303,10 +405,15 @@ export default function TransactionsPage() {
                                         }
                                     };
 
+                                    const isNewTransaction = newTransactionIds.has(transaction.transaction_id);
+
                                     return (
                                         <tr
                                             key={transaction.transaction_id}
-                                            className="hover:bg-accent/50 transition-colors"
+                                            className={`hover:bg-accent/50 transition-all duration-500 ${isNewTransaction
+                                                    ? 'bg-green-500/10 animate-pulse border-l-4 border-l-green-500'
+                                                    : ''
+                                                }`}
                                         >
                                             <td className="px-6 py-4">
                                                 <code className="text-xs text-muted-foreground">

@@ -55,6 +55,105 @@ class RiskAnalyzer:
 
         # 1. Базовая оценка по вероятности от ML
         base_risk_score = fraud_probability * 100
+        
+        # Дополнительные факторы риска из признаков транзакции
+        additional_risk = 0
+        
+        # КРИТИЧНЫЕ ФАКТОРЫ РИСКА
+        
+        # VPN/Proxy/Tor (очень высокий риск мошенничества)
+        if getattr(transaction, 'vpn', False):
+            additional_risk += 40
+            risk_factors.append("Использование VPN")
+        if getattr(transaction, 'proxy', False):
+            additional_risk += 35
+            risk_factors.append("Использование прокси")
+        if getattr(transaction, 'tor', False):
+            additional_risk += 45
+            risk_factors.append("Использование Tor")
+        
+        # Эмулятор устройства
+        if getattr(transaction, 'is_emulator', False):
+            additional_risk += 35
+            risk_factors.append("Обнаружен эмулятор устройства")
+        
+        # ВАЖНЫЕ ФАКТОРЫ
+        
+        # Адреса не совпадают
+        if not getattr(transaction, 'addresses_match', True):
+            additional_risk += 20
+            risk_factors.append("Адрес доставки не совпадает с платежным")
+        
+        # История чарджбеков (очень важный сигнал!)
+        chargebacks = getattr(transaction, 'previous_chargebacks', 0)
+        if chargebacks > 0:
+            chargeback_risk = min(chargebacks * 25, 50)  # Max +50
+            additional_risk += chargeback_risk
+            risk_factors.append(f"{chargebacks} предыдущих чарджбеков")
+        
+        # Иностранная карта (несоответствие стран)
+        issuer_country = getattr(transaction, 'issuer_country', '')
+        ip_country = getattr(transaction, 'ip_country', '')
+        if issuer_country and ip_country and issuer_country != ip_country:
+            additional_risk += 15
+            risk_factors.append(f"Карта из {issuer_country}, IP из {ip_country}")
+        
+        # 3DS не пройдена
+        if not getattr(transaction, 'is_3ds_passed', False):
+            additional_risk += 25
+            risk_factors.append("3D Secure не пройдена")
+        
+        # Множественные попытки оплаты
+        attempts = getattr(transaction, 'attempt_count', 1)
+        if attempts > 1:
+            attempt_risk = min((attempts - 1) * 10, 30)  # Max +30
+            additional_risk += attempt_risk
+            risk_factors.append(f"{attempts} попыток оплаты")
+        
+        # VELOCITY МЕТРИКИ
+        
+        # Высокая velocity с карты
+        velocity_card = getattr(transaction, 'velocity_same_card_1h', 0)
+        if velocity_card > 2:
+            card_risk = min((velocity_card - 2) * 8, 25)  # Max +25
+            additional_risk += card_risk
+            risk_factors.append(f"{velocity_card} транзакций с той же карты за час")
+        
+        # Высокая velocity с IP
+        velocity_ip = getattr(transaction, 'velocity_same_ip_24h', 0)
+        if velocity_ip > 5:
+            ip_risk = min((velocity_ip - 5) * 3, 20)  # Max +20
+            additional_risk += ip_risk
+            risk_factors.append(f"{velocity_ip} транзакций с того же IP за 24ч")
+        
+        # ПОВЕДЕНЧЕСКИЕ ФАКТОРЫ
+        
+        # Высокий cart abandonment rate
+        cart_abandon = getattr(transaction, 'cart_abandon_rate', 0.0)
+        if cart_abandon > 0.3:
+            additional_risk += 15
+            risk_factors.append(f"Высокий процент брошенных корзин ({cart_abandon*100:.0f}%)")
+        
+        # Новый пользователь без заказов
+        prev_orders = getattr(transaction, 'previous_orders', 0)
+        if prev_orders == 0:
+            additional_risk += 10
+            risk_factors.append("Новый клиент без истории заказов")
+        
+        # Телефон не подтвержден
+        if not getattr(transaction, 'phone_verified', True):
+            additional_risk += 8
+            risk_factors.append("Телефон не подтвержден")
+        
+        # Адрес не подтвержден
+        if not getattr(transaction, 'address_verified', True):
+            additional_risk += 8
+            risk_factors.append("Адрес доставки не подтвержден")
+        
+        # Товар высокого риска
+        if getattr(transaction, 'is_high_risk_item', False):
+            additional_risk += 15
+            risk_factors.append("Товар в категории высокого риска")
 
         # 2. Модификация на основе типа транзакции
         type_multiplier = self._get_type_risk_multiplier(transaction.type)
@@ -81,7 +180,10 @@ class RiskAnalyzer:
             risk_factors.append("Подозрительное изменение балансов")
 
         # 5. Анализ дополнительных факторов
-        additional_risk = self._analyze_additional_factors(transaction)
+        old_additional = self._analyze_additional_factors(transaction)
+        risk_score += old_additional
+        
+        # 6. Добавить факторы риска из признаков
         risk_score += additional_risk
 
         # Ограничение риска в диапазоне 0-100

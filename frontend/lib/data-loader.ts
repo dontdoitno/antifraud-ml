@@ -72,7 +72,24 @@ export async function loadTransactions(): Promise<Transaction[]> {
         })).filter(t => t.transaction_id); // Filter out any empty rows
 
         console.log(`Loaded ${transactions.length} transactions from CSV`);
-        return transactions;
+
+        // Загрузить транзакции из API (если есть)
+        let apiTransactions: Transaction[] = [];
+        try {
+            const apiResponse = await fetch('/data/api_transactions.json');
+            if (apiResponse.ok) {
+                apiTransactions = await apiResponse.json();
+                console.log(`Loaded ${apiTransactions.length} API transactions`);
+            }
+        } catch (error) {
+            console.log('No API transactions file found, using only CSV data');
+        }
+
+        // Объединить транзакции (API транзакции первыми - они свежее)
+        const allTransactions = [...apiTransactions, ...transactions];
+
+        console.log(`Total: ${allTransactions.length} transactions (${apiTransactions.length} from API, ${transactions.length} from CSV)`);
+        return allTransactions;
     } catch (error) {
         console.error('Error loading transactions from CSV:', error);
         // Return empty array if loading fails
@@ -82,6 +99,43 @@ export async function loadTransactions(): Promise<Transaction[]> {
 
 
 export function calculateRiskScore(transaction: Transaction): RiskAssessment {
+    // Если risk_score уже есть в транзакции (из API), используем его
+    if (transaction.risk_score !== undefined && transaction.risk_score !== null) {
+        let level: 'low' | 'medium' | 'high' = 'low';
+        if (transaction.risk_score >= 80) level = 'high';
+        else if (transaction.risk_score >= 50) level = 'medium';
+
+        // Преобразуем строковые факторы из backend в RiskFactor объекты
+        const backendFactors = transaction.risk_factors || [];
+        const factors: RiskFactor[] = backendFactors.map(factorText => {
+            // Определяем уровень влияния по ключевым словам
+            let impact: 'low' | 'medium' | 'high' = 'medium';
+            const highKeywords = ['VPN', 'Proxy', 'Tor', 'эмулятор', 'чарджбек', '3D Secure'];
+            const lowKeywords = ['Телефон', 'Адрес доставки не подтвержден'];
+
+            if (highKeywords.some(keyword => factorText.includes(keyword))) {
+                impact = 'high';
+            } else if (lowKeywords.some(keyword => factorText.includes(keyword))) {
+                impact = 'low';
+            }
+
+            return {
+                name: factorText,
+                description: factorText,
+                impact,
+                value: true
+            };
+        });
+
+        return {
+            score: transaction.risk_score,
+            level,
+            confidence: transaction.fraud_probability || 0.5,
+            factors  // Используем факторы из backend!
+        };
+    }
+
+    // Иначе рассчитываем самостоятельно (для CSV транзакций)
     let score = 0;
     const factors: RiskFactor[] = [];
 
